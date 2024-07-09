@@ -21,7 +21,7 @@ export class JWTService implements TokenService {
     @inject(TokenServiceBindings.TOKEN_EXPIRES_IN)
     private jwtExpiresInInjected: string,
   ) {
-    this.jwtSecret = this.jwtSecretInjected || 'your_default_secret_here'; // Assign a default value if jwtSecretInjected is falsy
+    this.jwtSecret = this.jwtSecretInjected; // Assign a default value if jwtSecretInjected is falsy
     this.jwtExpiresIn = expiresIn;
   }
 
@@ -29,7 +29,7 @@ export class JWTService implements TokenService {
     const {id, role} = userProfile;
 
     const token = await signAsync({id, role}, this.jwtSecret, {
-      expiresIn: this.jwtExpiresIn || '1d',
+      expiresIn: this.jwtExpiresIn,
       algorithm: 'HS256' as any,
     })
 

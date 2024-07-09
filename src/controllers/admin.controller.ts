@@ -1,4 +1,5 @@
 import {authenticate} from '@loopback/authentication';
+import {authorize} from '@loopback/authorization';
 import {inject} from '@loopback/core';
 import {
   Count,
@@ -122,6 +123,9 @@ export class AdminController {
 
 
   @authenticate('jwt')
+  @authorize({
+    allowedRoles: ["1"],
+  })
   @get('/products')
   @response(200, {
     description: 'Array of Product model instances',

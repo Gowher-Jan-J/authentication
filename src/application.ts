@@ -9,12 +9,13 @@ import {
 import {ServiceMixin} from '@loopback/service-proxy';
 import * as dotenv from 'dotenv';
 import path from 'path';
+import {AdminController} from './controllers';
 import {TokenServiceBindings} from './keys';
 import {JWTMiddlewareProvider} from './middleware/jwt-middleware';
 import {RoleAuthorizeMiddlewareProvider} from './middleware/role-authorize.middleware';
 import {setupAuthentication} from './security';
 import {MySequence} from './sequence';
-import {MyAuthorizationProvider} from './services/authorized-provider';
+import {RoleAuthorizerProvider} from './services/authorized-provider';
 import {JWTService} from './services/jwt-services'; // Ensure this import is correct
 import {UserService} from "./services/user-services";
 export {ApplicationConfig};
@@ -23,13 +24,16 @@ dotenv.config();
 export class AuthenticationApplication extends BootMixin(
   ServiceMixin(RepositoryMixin(RestApplication)),
 ) {
+  getControllerInstance(AdminController: AdminController): import("./controllers").AdminController | PromiseLike<import("./controllers").AdminController> {
+    throw new Error('Method not implemented.');
+  }
   constructor(options: ApplicationConfig = {}) {
     super(options);
 
     // Set up the custom sequence
     this.sequence(MySequence);
     this.bind('services.UserService').toClass(UserService);
-    this.bind('authorizationProviders.role-provider').toProvider(MyAuthorizationProvider);
+    this.bind('authorizationProviders.authorized-provider').toProvider(RoleAuthorizerProvider);
 
     // Set up default home page
     this.static('/', path.join(__dirname, '../public'));

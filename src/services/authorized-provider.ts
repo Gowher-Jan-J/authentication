@@ -1,39 +1,31 @@
-import {AuthorizationContext, AuthorizationDecision, AuthorizationMetadata, Authorizer} from '@loopback/authorization';
-import {inject, Provider, ValueOrPromise} from '@loopback/core';
+import {
+  AuthorizationContext,
+  AuthorizationDecision,
+  AuthorizationMetadata,
+  Authorizer,
+} from '@loopback/authorization';
+import {Provider, inject} from '@loopback/core';
 import {UserProfile} from '@loopback/security';
-import {JWTService} from './jwt-services';
 
-export class MyAuthorizationProvider implements Provider<Authorizer> {
+export class RoleAuthorizerProvider implements Provider<Authorizer> {
   constructor(
-    @inject('services.JWTService')
-    public jwtService: JWTService,
+    @inject('authentication.currentUser') private currentUser: UserProfile,
   ) { }
 
   value(): Authorizer {
-    return this.authorize.bind(this) as Authorizer;
+    return this.authorize.bind(this);
   }
 
-  authorize(
+  async authorize(
     authorizationCtx: AuthorizationContext,
     metadata: AuthorizationMetadata,
-  ): ValueOrPromise<AuthorizationDecision> {
-    const user: UserProfile = authorizationCtx.principals[0];
-    console.log("🚀 ~ MyAuthorizationProvider ~ user:", user)
+  ): Promise<AuthorizationDecision> {
+    const userRoles = this.currentUser.role;
+    const requiredRoles = metadata.allowedRoles ?? [];
 
-    if (!user) {
-      return AuthorizationDecision.DENY;
-    }
-
-    const allowedRoles = metadata.allowedRoles;
-    console.log("🚀 ~ MyAuthorizationProvider ~ allowedRoles:", allowedRoles)
-    if (!allowedRoles || allowedRoles.length === 0) {
-      return AuthorizationDecision.ALLOW;
-    }
-
-    if (allowedRoles.includes(user.role)) {
-      return AuthorizationDecision.ALLOW;
-    }
-
-    return AuthorizationDecision.DENY;
+    const hasRole = requiredRoles.includes(userRoles);
+    return hasRole
+      ? AuthorizationDecision.ALLOW
+      : AuthorizationDecision.DENY;
   }
 }
