@@ -10,10 +10,13 @@ import {ServiceMixin} from '@loopback/service-proxy';
 import * as dotenv from 'dotenv';
 import path from 'path';
 import {TokenServiceBindings} from './keys';
+import {JWTMiddlewareProvider} from './middleware/jwt-middleware';
+import {RoleAuthorizeMiddlewareProvider} from './middleware/role-authorize.middleware';
 import {setupAuthentication} from './security';
 import {MySequence} from './sequence';
-import {RoleAuthorizationProvider} from './services/authorization.provider';
+import {MyAuthorizationProvider} from './services/authorized-provider';
 import {JWTService} from './services/jwt-services'; // Ensure this import is correct
+import {UserService} from "./services/user-services";
 export {ApplicationConfig};
 dotenv.config();
 
@@ -25,8 +28,8 @@ export class AuthenticationApplication extends BootMixin(
 
     // Set up the custom sequence
     this.sequence(MySequence);
-
-    this.bind('authorizationProviders.role-provider').toProvider(RoleAuthorizationProvider);
+    this.bind('services.UserService').toClass(UserService);
+    this.bind('authorizationProviders.role-provider').toProvider(MyAuthorizationProvider);
 
     // Set up default home page
     this.static('/', path.join(__dirname, '../public'));
@@ -36,6 +39,8 @@ export class AuthenticationApplication extends BootMixin(
       path: '/explorer',
     });
     this.component(RestExplorerComponent);
+    this.bind('middleware.jwt').toClass(JWTMiddlewareProvider);
+    this.bind('middleware.role.authorize').toProvider(RoleAuthorizeMiddlewareProvider);
 
     this.bind(TokenServiceBindings.TOKEN_SECRET).to(process.env.TOKEN_SECRET || 'your_default_secret_here');
     this.bind(TokenServiceBindings.TOKEN_EXPIRES_IN).to(process.env.TOKEN_EXPIRES_IN || '1d');

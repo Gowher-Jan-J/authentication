@@ -2,12 +2,15 @@ import {Entity, model, property} from '@loopback/repository';
 import {v4 as uuidv4} from 'uuid';
 
 enum Role {
-  User = 'USER',
-  Admin = 'ADMIN',
+  USER,
+  ADMIN,
 }
 
 @model()
 export class Admin extends Entity {
+  static role(role: any) {
+    throw new Error('Method not implemented.');
+  }
   @property({
     type: 'string',
     id: true,
@@ -39,7 +42,7 @@ export class Admin extends Entity {
   phoneNumber: string;
 
   @property({
-    type: 'string',
+    type: 'number',
     required: true,
   })
   role: Role;

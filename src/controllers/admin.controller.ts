@@ -6,7 +6,7 @@ import {
   Filter,
   FilterExcludingWhere,
   repository,
-  Where,
+  Where
 } from '@loopback/repository';
 import {
   del,
@@ -20,23 +20,35 @@ import {
   requestBody,
   response,
 } from '@loopback/rest';
+import {TokenServiceBindings} from "../keys";
+import {JWTMiddlewareProvider} from '../middleware/jwt-middleware';
+import {RoleAuthorizeMiddlewareProvider} from '../middleware/role-authorize.middleware';
 import {Admin} from '../models';
 import {AdminRepository} from '../repositories';
 import {JWTService} from "../services/jwt-services";
+import {UserService} from "../services/user-services";
+
+
 
 export class AdminController {
   authenticateUser: any;
+  response: any;
   constructor(
     @repository(AdminRepository)
     public adminRepository: AdminRepository,
-    @inject('services.JWTService')
+    @inject(TokenServiceBindings.TOKEN_SERVICE)
     private jwtService: JWTService,
+    @inject('services.UserService')
+    public userService: UserService,
+    @inject('middleware.jwt') private jwt: JWTMiddlewareProvider,
+    @inject('middleware.role.authorize') private authorize: RoleAuthorizeMiddlewareProvider,
+
   ) { }
 
   @post('/login', {
     responses: {
       '200': {
-        description: 'Token generated successfully',
+        description: 'Token',
         content: {
           'application/json': {
             schema: {
@@ -50,6 +62,10 @@ export class AdminController {
       },
     },
   })
+  @response(200, {
+    description: 'Admin model instance',
+    content: {'application/json': {schema: getModelSchemaRef(Admin)}},
+  })
   async login(
     @requestBody({
       content: {
@@ -59,32 +75,26 @@ export class AdminController {
             properties: {
               email: {type: 'string'},
               password: {type: 'string'},
+              // role: {type: 'string'}
             },
             required: ['email', 'password'],
           },
         },
       },
     })
-    credentials: {email: string; password: string},
+    User: Admin
   ): Promise<{token: string}> {
-    try {
-      // Example: Replace with actual authentication logic
-      const authenticatedUser = await this.authenticateUser(credentials);
+    // console.log("🚀 ~ AdminController ~ User:", User)
 
-      if (!authenticatedUser) {
-        throw new Error('Invalid credentials');
-      }
+    const user = await this.userService.verifyCredentials(User.email, User.password);
+    // console.log("🚀 ~ AdminController ~ user:", user)
+    const userProfile = this.userService.convertToUserProfile(user);
+    // console.log("🚀 ~ AdminController ~ userProfile:", userProfile)
+    const token = await this.jwtService.generateToken(userProfile);
+    // console.log("🚀 ~ AdminController ~ token:", token)
 
-      const token = await this.jwtService.generateToken(authenticatedUser);
-
-      return {token};
-    } catch (error) {
-      throw new Error('Authentication failed');
-    }
+    return {token};
   }
-
-
-
 
   @post('/admins')
   @response(200, {
@@ -104,32 +114,17 @@ export class AdminController {
     })
     admin: Omit<Admin, 'id'>,
   ): Promise<Admin> {
-    console.log(admin);
+    // console.log(admin);
     return this.adminRepository.create(admin);
 
 
   }
 
+
   @authenticate('jwt')
-  @get('/admins/count')
+  @get('/products')
   @response(200, {
-    description: 'Admin model count',
-    content: {'application/json': {schema: CountSchema}},
-  })
-  @response(401, {
-    description: 'Unauthorized',
-  })
-  async count(@param.where(Admin) where?: Where<Admin>): Promise<Count> {
-    try {
-      return await this.adminRepository.count(where);
-    } catch (error) {
-      throw new HttpErrors.Unauthorized('Invalid token');
-    }
-  }
-  @authenticate('jwt')
-  @get('/admins')
-  @response(200, {
-    description: 'Array of Admin model instances',
+    description: 'Array of Product model instances',
     content: {
       'application/json': {
         schema: {
@@ -142,14 +137,13 @@ export class AdminController {
   @response(401, {
     description: 'Unauthorized',
   })
-  async find(@param.filter(Admin) filter?: Filter<Admin>): Promise<Admin[]> {
-    try {
-      return await this.adminRepository.find(filter);
-    } catch (error) {
-      throw new HttpErrors.Unauthorized('Invalid token');
-    }
+  async find(
+    @param.filter(Admin) filter?: Filter<Admin>,
+  ): Promise<Admin[]> {
+    return this.adminRepository.find(filter);
   }
-  @authenticate('jwt')
+
+
   @patch('/admins')
   @response(200, {
     description: 'Admin PATCH success count',
